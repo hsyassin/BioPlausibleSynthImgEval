@@ -1,6 +1,6 @@
 # BioPlausibleSynthImgEval
 
-This clinical relevant assessment is accomplished in two steps:
+This clinically relevant assessment is accomplished in two steps:
 
 - [x] Preprocessing and training a 2D CNN Segmentation model with application-specific settings to segment a particular brain region in 2D images (Checkpoints of Trained models are provided).
 

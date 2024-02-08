@@ -1,0 +1,46 @@
+PreProcessing.py Arguments:
+1. '--Dataset', '-Data', required=True, help=Dataset, valid values are ukbiobank or adni_t1_mprage or Oasis3
+2. '--region_mask', '-re_m', required=True, help=mask region, valid values are VV for Ventricle volujme or BV for Brain Volume or IV for Intracranial Volume or HV for Hippocampus Volume or CV for Cerebral Cortex Volume
+3. ‘—SliceType', '-SlTyp', required=False, help=slice type, valid values is midSl for middle slices
+4. '--destination_path', '-destin_path', required=False, help=destination_path of the prprocessing output folder should be specified or it will be the default path of Datasets/{Dataset}/{target_orient}/{Typ}
+5. '--mri_convert', required=False, help=mri_convert, valid values are empty string "" for False and any string for True as a default to preprocess MRI images (1- reorient to Coronal, 2-Rotate, 3-resize to 256^3)
+6. '--target_orient', '-orient', required=False, help=target orientation default is Coronal, valid options are Axial and Sagittal
+7. '--stack', required=False, help=stack, valid values are empty string "" for False and any string for True as a default to stack the images and masks into two seperate h5 files
+8. '--nifti', '-nii', required=False, help=nifti, valid values are empty string "" for False as a default and any string for True, which would save single slices whether from images or masks in nii form
+9. '--return_weights', '-r_Ws', required=False, help=return weights, valid values are empty string "" for False as a default and any string for True, which would calculate the class weights from the mask but it is memory heavy
+10. '--trial', required=False, help=trial, valid values are empty string "" for False as a default and any string for True, which would run the script for 20 samples for test purposes
+
+Segmenter_torch.py Arguments:
+1. '--main_path', type=str, required=True, help=main_path, valid value is the path to your Preprocessing folder if PreProceesing.py was used other trace the code and specify your own
+2. '--out_path', type=str, required=True, help=out_path, valid value is the path to output of the model whether checkpoints or test or prediction results
+3. '--Dataset', type=str, required=True, help=Dataset, valid values are ukbiobank or adni_t1_mprage or Oasis3
+4. '--network', '-net', type=str, required=True, help=network, valid values are onlyTest with default best epoch or onlyTrain or TrainTest
+5. '--runMode', '-mode', type=str, required=True, help=run mode, valid values are Fcn_resnet50 (default Pretrained and rest of settings are optimized for it or LRASPP_mobilenet_v3 or quicknat
+6. '--resume_from_chkp', '-resume', type=bool, required=True, help=resume_from_checkpoint, valid values are empty string "" for False and any string for True as a default for pretrained models
+7. '--mask_region', '-re_m', type=str, required=True, help=mask region, valid values are VV for Ventricle volujme or BV for Brain Volume or IV for Intracranial Volume or HV for Hippocampus Volume or CV for Cerebral Cortex Volume
+8. '--chkp_type', type=str, required=False, help=checkpoint type: resume from Best (default or Last
+9. '--wnbactive', type=bool, required=False, help=wnbactive , valid values are empty string "" for False as a default and any string for True
+10. '--num_epochs', type=int, required=False, help=num_epochs , valid values are 300 as default for pretrained models or any int number
+11. '--test_typ', type=str, required=True, help=test typ, valid values are Internal or External-Wes_Real or External-Wes_Fake_Base or External-Wes_Fake_Ms or Internal-Wes_Real or Internal-Wes_Fake_Base or Internal-Wes_Fake_Ms
+12. '--SliceType', '-SlTyp', type=str, required=False, help=slice type, valid value is midSl for middle slices
+13. '--run_prefix', type=str
+14. '--contrast', type=str
+15. '--orient', type=str
+16. '--normmode', type=int
+17. '--n_folds', type=int
+18. '--foldID', type=int
+19. '--useClassWeight', type=bool, required=False, help= useClassWeight, valid values are empty string "" for False as a default and any string for True 
+20. '--MRIAug', type=bool, required=False, help= MRIAug, valid values are empty string "" for False as a default and any string for True to enable additional augmentations other than the default rotation and flipping
+21. '--test_percent', type=float
+22. '--val_percent', type=float
+23. '--trainID', type=str
+
+AreaCalculation_StratifiedPlots.py Arguments:
+1. '--train_data', type=str, required=True, help=train_data, valid values are ukbiobank or adni_t1_mprage or Oasis3
+2. '--SliceType', '-SlTyp', type=str, required=False, help=slice type, valid value is midSl for middle slices
+3. '--mask_region', '-re_m', type=str, required=True, help=mask region, valid values are VV for Ventricle volujme or BV for Brain Volume or IV for Intracranial Volume or HV for Hippocampus Volume or CV for Cerebral Cortex Volume
+4. '--test_data', type=str, required=True, help=test_data, valid values are ukbiobank or adni_t1_mprage or Oasis3
+5. '--test_typ', type=str, required=True, help=test typ, valid values are Internal or External-Wes or Internal-Wes
+6. '--resume', type=bool, required=True, help=resume_from_variable, valid values are empty string "" for False as a default and any string for True to load pre calculated and stored variables needed for plots
+7. '--main_path', type=str, required=True, help=main_path, valid value is the path to your segmented masks folder if Segmenter_torch.py was used otherwise trace the code and specify your own
+8. '--out_path', type=str, required=True, help=out_path, valid value is the path to the output of the script plots or stored variables

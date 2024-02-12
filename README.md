@@ -4,7 +4,7 @@ This clinically relevant assessment is accomplished in two steps:
 
 - [x] Preprocessing and training a 2D CNN Segmentation model with application-specific settings to segment a particular brain region in 2D images (Checkpoints of Trained models are provided).
 
-- [x] Calculat the areas (=pixel count in 1m^3 resolution images) for the specified region from segmentation masks ,and plot the results in a stratified manner based on gender, age, and Clinical Dementia Rating CDR (if present in the data).
+- [x] Calculate the areas (measured as pixel counts in images with 1m^3 resolution) for the specified regions from segmentation masks, visualize the outcomes, and conduct statistical analyses to compare real and synthetic areas across various covariate criteria.
 
 The directory structure is shown below: 
 
@@ -21,7 +21,9 @@ BioPlausibleSynthImgEval
     │       └── Results
     │
     ├── 2D Area
-    │   └── Sampling-AreaCalculations.py
+    │   ├── Sampling-AreaCalculations.py
+    │   ├── Evaluation.py
+    │   └── Stat_tests.py
     │
     ├── Arguments_Info
     ├── environment.yml
@@ -67,10 +69,16 @@ python Segmenter_torch.py -mode=onlyTest -resume=True --Dataset=ukbiobank -net=F
 ```
 - [x] Please note that when running the pretrained models or starting from scratch. The input channel of the torch vision models should be changed manually after installation of the package from the default 3 channels to 1 for grayscale MRI images. The upright standard coronal slice orientation is used, and the current default input tensor shape is (batch, channel=1, h=256, w=256). To accomplish this, navigate to /dhc/home/user>/conda3/envs/envname>/lib/python3.7/site-packages/torchvision/models/resnet.py. and change the input value from 3 to 1 in the first argument of self.conv1 = nn.Conv2d(**3**, self.inplanes, kernel size=7, stride=2, padding=3, bias=False).
 
-### 2.1 Area Calculation and Stratified Plotting
-Example on how to run the AreaCalculation_StratifiedPlots script:
+### 2.1 Area Calculation
+Instructions on executing the Sampling-AreaCalculations script after manually setting the variables within the script:
 ```
-python AreaCalculation_StratifiedPlots.py --train_data=Ukbiobank -re_m=VV --test_data=adni_t1_mprage --test_typ=External-Wes --resume= --main_path=/dhc/cold/groups/syreal/Segmentation_Tests --out_path=results/Area_RealVsFake
+python Sampling-AreaCalculations.py
+```
+
+### 2.2 Visualizing Data and Conducting Statistical Analysis
+Instructions on executing the Evaluation script after manually setting the variables within the script:
+```
+python Evaluation.py
 ```
 
 <!-- ## Add your files
@@ -128,12 +136,12 @@ hadya.yassin@hpi.de
 ## Credits
 Click on Star if you like this repository.
 
-Please cite the following in your publications if you use this package or benefit from the scripts in this repository:
+<!-- Please cite the following in your publications if you use this package or benefit from the scripts in this repository:
 
 
 BibTeX entry:
 
-@{}
+@{}        -->
 
 Your support is much appreciated!
 

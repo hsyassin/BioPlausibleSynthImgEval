@@ -4,41 +4,29 @@ import nibabel as nib
 import os
 import re
 
-def dataframe(data, Real):
 
-    # Combine left and right hippocampus volumes
-    data['lateral_ventricle_volume'] = data['left_lateral_ventricle'] + data['right_lateral_ventricle']
-    data['hippocampus_volume'] = data['left_hippocampus'] + data['right_hippocampus']
-
-    # Initialize total_intracranial column with NaN or zeros
-    data['total_intracranial'] = pd.np.nan
-
-    if Real:
-        # Loop over each row in the DataFrame
-        for index, row in data.iterrows():
-            # Extract the original path
-    
-            original_path = row['path_org']
-        
-        
-            # Replace the basename of the original path
-            new_path = os.path.dirname(original_path) + "/synthseg_7_3_2/vols_T1toMNIlin.csv"
-
-            # Read the matching CSV file
-            csv_data = pd.read_csv(new_path)
-            
-            # Extract the 'total intracranial' value
-            total_intracranial_value = csv_data['total intracranial'].iloc[0]
-            
-            # Insert the value into the 'total_intracranial' column of the DataFrame
-            data.at[index, 'total_intracranial'] = total_intracranial_value
-  
-    return data
+__author__ = "Hadya Yassin"
+__maintainer__ = "Hadya Yassin"
+__email__ = "hadya.yassin@hpi.de"
+__status__ = "Production"
+__copyright__ = "Copyright (c) 2023 Yassin, Hadya Sa'ad Abdalwadoud"
+__license__ = "MIT"
 
 
+"""
+This code is designed to preprocess, sample, and analyze MRI imaging data, specifically focusing on comparing real and synthetic datasets.
+1-  Creating either matched or unmatched sample distributions at a ratio of 5 synthetic samples to 1 real sample.
+    In the matched scenario, the code diligently ensures an exact covariate distribution match between the real and synthetic datasets. Conversely, in the unmatched 
+    scenario, it intentionally modifies the distribution of a chosen covariate for a comparative analysis against the original distribution found in the real dataset.
+
+2-  It calculates areas within the real images and the sampled synthetic segmentation masks. 
+
+3-  Exclude Segmentation outliers and rescale the corrected areas for all the created matched and unmatched dataframes to a scale more representative of the original area values before correction and dividing by the much larger intracranial area.
+
+"""
 
 
-def read_and_preprocess_data(real_data_path, synthetic_data_path, test_data, MCI):
+def read_and_preprocess_data(real_data_path, synthetic_data_path, test_data):
     # Read real data
     real_data = pd.read_csv(real_data_path)
     real_data.columns = real_data.columns.str.strip()
@@ -73,9 +61,8 @@ def read_and_preprocess_data(real_data_path, synthetic_data_path, test_data, MCI
   
     return real_data, synthetic_data
 
-def create_random_samples(real_data, synthetic_data, test_data, s_type, n_samples=5, scale=1, discard=True, MCI="includeMCI-", cov="Age", dom = 'M'):
+def create_random_samples(real_data, synthetic_data, test_data, s_type, n_samples=5, scale=1, discard=True, cov="Age", dom = 'M'):
     sampled_sets_Gen = []
-    sampled_sets_Real = []
     all_selected_sub_ids = set()  # Global set to track all used Sub_IDs
 
     for sample_num in range(n_samples):
@@ -85,11 +72,8 @@ def create_random_samples(real_data, synthetic_data, test_data, s_type, n_sample
         elif s_type == "unmatched":
             synthetic, data = create_unmatched_sample(real_data, synthetic_data, scale, discard, test_data, cov, dom, all_selected_sub_ids)
 
-        synthetic = dataframe(synthetic, Real=False)
-        data = dataframe(data, Real=True)
-
         sampled_sets_Gen.append(synthetic)
-        sampled_sets_Real.append(data)
+        sampled_sets_Real = data  
 
         # Update the global set with new Sub_IDs from the current sample
         current_sub_ids = set(synthetic['Sub_IDs'])
@@ -101,8 +85,8 @@ def create_random_samples(real_data, synthetic_data, test_data, s_type, n_sample
         # Concatenate the two DataFrames
         combined_df = pd.concat([data, synthetic], ignore_index=True)
 
-        # # Save the combined DataFrame to a CSV file
-        # combined_df.to_csv(f'data-dist/{MCI}_{s_type}-{cov}-{dom}_{test_data}_{extra}Sub_IDs-scld_{scale}smpl_RealVsGen_cdr_sex_sample_{sample_num+1}.csv', index=False)
+        # # Save intermidiate seperate samples dfs of the combined DataFrame to a CSV file (optional)
+        # combined_df.to_csv(f'data/*_sample_{sample_num+1}.csv', index=False)
 
     return sampled_sets_Gen, sampled_sets_Real
 
@@ -207,7 +191,7 @@ def create_matched_sample(data, synthetic_data, scale, discard, test_data, exclu
         # Filter synthetic_data to exclude already selected Sub_IDs in the same sample
         synthetic_data = synthetic_data[~synthetic_data['Sub_IDs'].isin(selected_sub_ids)]
 
-        # Convert 'col2' to int
+        # Convert columns to int
         synthetic_data['Age'] = synthetic_data['Age'].astype(int)
         synthetic_data['Sex'] = synthetic_data['Sex'].astype(int)
 
@@ -413,61 +397,60 @@ def Calc_Area_nifti(file_path):
             return None
         
 
-def calculate_areas(n_samples, df_Real, df_Gen ,Image_Types, test_data, s_type, network, scale, cov="", dom='M'):
+def calculate_areas(df_Real, df_Gen ,Image_Types, test_data, s_type, network, scale, cov="", dom='M'):
 
     Real_MASK_IDENTIFIER =  "synthseg_7_3_2/Pred_T1toMNIlin_synthseg.nii.gz"
     Syn_MASK_IDENTIFIER = 'Pred_mask_seed_'
     network = "D_Unet"
 
-    for j in range(n_samples):
-        for Image_Type in Image_Types:
+    for Image_Type in Image_Types:
 
-            main_path=f"/path/to/segmentation/masks"
+        main_path=f"/path/to/segmentation/masks"
+
+        if Image_Type == "Real":
+            df = df_Real
+        elif Image_Type == "Gen":
+            df = df_Gen
+
+        regions = ["VV", "HV", "IV"]
+        for region in regions:
 
             if Image_Type == "Real":
-                df = df_Real[j]
+                df[f'new_path_{region}'] = df.apply(lambda row: main_path.replace("T1_unbiased_brain.nii.gz", Real_MASK_IDENTIFIER), axis=1)
+        
             elif Image_Type == "Gen":
-                df = df_Gen[j]
-
-            regions = ["VV", "HV", "IV"]
-            for region in regions:
-
-                if Image_Type == "Real":
-                    df[f'new_path_{region}'] = df.apply(lambda row: main_path.replace("T1_unbiased_brain.nii.gz", Real_MASK_IDENTIFIER), axis=1)
-            
-                elif Image_Type == "Gen":
-                    df[f'new_path_{region}'] = df.apply(lambda row: main_path + Syn_MASK_IDENTIFIER + row['Sub_IDs'] + '.nii.gz', axis=1)
+                df[f'new_path_{region}'] = df.apply(lambda row: main_path + Syn_MASK_IDENTIFIER + row['Sub_IDs'] + '.nii.gz', axis=1)
 
 
-            # Iterate over each row in the DataFrame
-            for index, row in df.iterrows():
-                path_LV = row['new_path_VV']
-                path_IV = row['new_path_IV']
-                path_H = row['new_path_HV']
+        # Iterate over each row in the DataFrame
+        for index, row in df.iterrows():
+            path_LV = row['new_path_VV']
+            path_IV = row['new_path_IV']
+            path_H = row['new_path_HV']
 
-                area_LV = Calc_Area_nifti(path_LV)
-                area_IV = Calc_Area_nifti(path_IV)
-                area_H = Calc_Area_nifti(path_H)
+            area_LV = Calc_Area_nifti(path_LV)
+            area_IV = Calc_Area_nifti(path_IV)
+            area_H = Calc_Area_nifti(path_H)
 
-                #Potential Division by Zero
-                if area_IV == 0 or None:
-                    raise RuntimeError("Check why IV pixel count = 0 or None is concerning")
-                else:
-                    correct_area_LV = area_LV / area_IV
-                    correct_area_H = area_H / area_IV
+            #Potential Division by Zero
+            if area_IV == 0 or None:
+                raise RuntimeError("Check why IV pixel count = 0 or None is concerning")
+            else:
+                correct_area_LV = area_LV / area_IV
+                correct_area_H = area_H / area_IV
 
 
-                # Store the results in the DataFrame or process them as needed
-                # Example: storing the mean of each image in a new column
-                df.at[index, 'LV_Area'] = area_LV
-                df.at[index, 'LV_correct_Area'] = correct_area_LV
-                df.at[index, 'H_Area'] = area_H
-                df.at[index, 'H_correct_Area'] = correct_area_H
+            # Store the results in the DataFrame or process them as needed
+            # Example: storing the mean of each image in a new column
+            df.at[index, 'LV_Area'] = area_LV
+            df.at[index, 'LV_correct_Area'] = correct_area_LV
+            df.at[index, 'H_Area'] = area_H
+            df.at[index, 'H_correct_Area'] = correct_area_H
 
-                if Image_Type == "Real":
-                    area_results_Real = df
-                elif Image_Type == "Gen":
-                    area_results_Gen = df
+            if Image_Type == "Real":
+                area_results_Real = df
+            elif Image_Type == "Gen":
+                area_results_Gen = df
 
 
         # Add 'Image_Type' column to each DataFrame
@@ -477,19 +460,87 @@ def calculate_areas(n_samples, df_Real, df_Gen ,Image_Types, test_data, s_type, 
         # Concatenate the two DataFrames
         combined_df = pd.concat([area_results_Real, area_results_Gen], ignore_index=True)
 
-        # Save the combined DataFrame to a CSV file
-        combined_df.to_csv(f'/path/to/...{s_type}{cov}{dom}{scale}.csv', index=False)
+        return combined_df
+
+# Function to apply the scaling equation
+def scale_area(value, region_min, region_max, new_min, new_max):
+    return ((value - region_min) / (region_max - region_min)) * (new_max - new_min) + new_min
+
+def rescale(dataframes, df_names):
+
+    for g in range(2): 
+        # Initialize min and max values
+        H_min, H_max = float('inf'), float('-inf')
+        LV_min, LV_max = float('inf'), float('-inf')
+        H_new_min, H_new_max = float('inf'), float('-inf')
+        LV_new_min, LV_new_max = float('inf'), float('-inf')
+
+        # Find the global min and max for both regions across all dataframes
+        for df in dataframes:
+            H_min = min(H_min, df['H_correct_Area'].min())
+            H_max = max(H_max, df['H_correct_Area'].max())
+            LV_min = min(LV_min, df['LV_correct_Area'].min())
+            LV_max = max(LV_max, df['LV_correct_Area'].max())
+
+            H_new_min = min(H_new_min, df['H_Area'].min())
+            H_new_max = max(H_new_max, df['H_Area'].max())
+            LV_new_min = min(LV_new_min, df['LV_Area'].min())
+            LV_new_max = max(LV_new_max, df['LV_Area'].max())
+
+        print(f"H_min: {H_min} H_max: {H_max} LV_min:{LV_min} LV_max: {LV_max} H_new_min: {H_new_min} H_new_max: {H_new_max} LV_new_min: {LV_new_min} LV_new_max:{LV_new_max}")
+
+
+        # Iterating through each DataFrame and its name for first scaling, then exclude very low area values after visually inspecting them for segmentation failures and setting the thresholds manually
+        ##ex: in my case 
+        ###first iterartion
+        if g == 0:
+            thresh = 40
+        ###2nd Iteration's goal: avoid discarding even if low area values, because we rescale based on min values as one factor and in the 2nd time lower values shouldn't be discarded 
+        elif g == 1:
+            thresh = 30
+
+        k = 0
+        for df, pth in zip(dataframes, df_names):
+            df[f'H_scaled_Area_1st'] = df['H_correct_Area'].apply(scale_area, args=(H_min, H_max, H_new_min, H_new_max))
+            df[f'LV_scaled_Area_1st'] = df['LV_correct_Area'].apply(scale_area, args=(LV_min, LV_max, LV_new_min, LV_new_max))
+
+            # Identify rows to discard
+            discard_condition = (df[f'H_scaled_Area_1st'] <= thresh) | (df[f'LV_scaled_Area_1st'] <= thresh)
+            discarded_rows = df[discard_condition]
+
+            if g ==0:
+                # Save discarded rows to a CSV file
+                discard_file_path = pth.replace('5Syn-1RealSamples', '5Syn-1Real_discarded-Seg-Outliers')
+                discarded_rows.to_csv(discard_file_path, index=False)
+
+                # Remove discarded rows from the original DataFrame
+                df = df[~discard_condition]
+
+                # Optionally, update the dictionary with the modified DataFrame
+                dataframes[k] = df
+                k+=1
+
+            elif g ==1:
+                if  not discarded_rows.empty:
+                    raise RuntimeError("sth wrong recheck should be empty")
+
+                pth = pth.replace('5Syn-1RealSamples', 'Rescaled_5Syn-1RealSamples_Ex-Seg-Outliers')
+
+                if not os.path.exists(pth):
+                    # Save the DataFrame to CSV
+                    df.to_csv(pth, index=False)
+
 
 
 def main():
 
-    scale = 1
+    scale = 1 
+    ratio = '5Syn-1Real'   
     discard = True
     match = False
-    network = "D_Unet"
+    network = "D_Unet"      ## netword used in segmentation of ROIs
     n_samples=5
     test_data = "Org_Adni"               
-    extra = "discardedUnique" if discard else "duplicated"
     s_type = "matched" if match else "unmatched"
     Image_Types = ["Real", "Gen"]
 
@@ -499,36 +550,66 @@ def main():
     # Read and preprocess data
     real_data, synthetic_data = read_and_preprocess_data(real_data_path, synthetic_data_path, test_data)
 
-    if match:
-        # Create matched random samples
-        samples_Gen, samples_Real = create_random_samples(real_data, synthetic_data, test_data, s_type, n_samples, scale, discard)
+    rescale_dfs = []
+    rescale_paths = []
+    
+    # Create matched random samples
+    s_type = "matched"
+    Gen_samples, Real_sample = create_random_samples(real_data, synthetic_data, test_data, s_type, n_samples, scale, discard)
 
-        check_duplicates_within_samples(samples_Gen)
-        check_duplicates_across_samples(samples_Gen)
+    check_duplicates_within_samples(Gen_samples)
+    check_duplicates_across_samples(Gen_samples)
 
-        calculate_areas(n_samples, samples_Real, samples_Gen, Image_Types, test_data, s_type, network, extra, scale)
+    # Combine the synthetic samples
+    Gen_samples = pd.concat(Gen_samples, ignore_index=True)
 
-    else:
-        # Create unmatched samples
-        focus_covariates = ['Age','CDGLOBAL','Sex']
+    combined_df = calculate_areas(Real_sample, Gen_samples, Image_Types, test_data, s_type, network, scale)
 
-        for cov in focus_covariates:
+    # Save paths to be used later on to save csvs
+    path = f'/data/Areas_5Samples/{ratio}Samples/...{s_type}.csv'
+
+    rescale_dfs.append(combined_df)
+    rescale_paths.append(path)
+    
+
+
+    # Create unmatched samples
+    s_type = "unmatched"
+    focus_covariates = ['Age','CDGLOBAL','Sex']
+
+    for cov in focus_covariates:
+        
+        if 'Age' in cov:
+            doms = ['High', 'Low']  #+- 5 years default
+        elif 'Sex' in cov:
+            doms = ['M10', 'F10']   #10% deviation from balanced 50:50 ratio    
+        elif 'CDGLOBAL' in cov:
+            doms = ['CN', 'AD']     #CN or AD dominated instead of MCI dominated in real data   
+
+        for dom in doms:
+            # Create matched random samples
+            Gen_samples, Real_sample = create_random_samples(real_data, synthetic_data, test_data, s_type, n_samples, scale, discard, cov, dom)
+
+            check_duplicates_within_samples(Gen_samples)
+            check_duplicates_across_samples(Gen_samples)
+
+            # Combine the synthetic samples
+            Gen_samples = pd.concat(Gen_samples, ignore_index=True)
+
+            combined_df = calculate_areas(Real_sample, Gen_samples, Image_Types, test_data, s_type, network, scale, cov, dom)
+
+            # Save paths to be used later on to save csvs
+            path = f'/data/Areas_5Samples/{ratio}Samples/...{s_type}{cov}{dom}.csv'
+
+            rescale_dfs.append(combined_df)
+            rescale_paths.append(path)
+    
+    ### Exclude Segmentation outliers and rescale the corrected areas for all the created matched and unmatched dataframes to a scale more representative of the original area values before correction and dividing by the much larger intracranial area.
+    rescale(rescale_dfs, rescale_paths)
             
-            if 'Age' in cov:
-                doms = ['High', 'Low']  #+- 5 years default
-            elif 'Sex' in cov:
-                doms = ['M10', 'F10']   #10% deviation from balanced 50:50 ratio    
-            elif 'CDGLOBAL' in cov:
-                doms = ['CN', 'AD']     #CN or AD dominated instead of MCI dominated in real data   
 
-            for dom in doms:
-                # Create matched random samples
-                samples_Gen, samples_Real = create_random_samples(real_data, synthetic_data, test_data, s_type, n_samples, scale, discard, MCI, cov, dom)
+    
 
-                check_duplicates_within_samples(samples_Gen)
-                check_duplicates_across_samples(samples_Gen)
-
-                calculate_areas(n_samples, samples_Real, samples_Gen, Image_Types, test_data, s_type, network, extra, scale, MCI, cov, dom)
 
 
 

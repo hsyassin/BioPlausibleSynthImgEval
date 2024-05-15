@@ -61,6 +61,7 @@ Example on how to run the PreProcessing script:
 ```
 python PreProcessing.py --Dataset=adni_t1_mprage  -re_m=VV  -SlTyp=midSl -destin_path=Datasets/adni_t1_mprage/Coronal/midSl 
 ```
+- [x] Please note that resizing of the MRI images is carried out with torchcomplex package ^[1].
 
 ### 1.2 Training and or Testing your model
 Example on how to run the Segmenter_torch script:

@@ -61,7 +61,7 @@ Example on how to run the PreProcessing script:
 ```
 python PreProcessing.py --Dataset=adni_t1_mprage  -re_m=VV  -SlTyp=midSl -destin_path=Datasets/adni_t1_mprage/Coronal/midSl 
 ```
-- [x] Please note that resizing of the MRI images is carried out with pytorch-complex package [1].
+- [x] Please note that the MRI images are resized using the pytorch-complex package located within the preprocessing script directory [(Chatterjee et al., 2022)](https://arxiv.org/abs/2302.04584).
 
 ### 1.2 Training and or Testing your model
 Example on how to run the Segmenter_torch script:
@@ -153,5 +153,3 @@ To be determined.
 Development phase, please share any concers or report bugs
 <!-- If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers. -->
 
-## References
-1. [Soumick Chatterjee, Pavan Tummala, Oliver Speck, Andreas Nürnberger: Complex Network for Complex Problems: A comparative study of CNN and Complex-valued CNN (IEEE IPAS, Dec 2023)](https://arxiv.org/abs/2302.04584)
